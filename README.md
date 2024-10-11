@@ -25,8 +25,8 @@ These instructions will help you set up and run the project on your local machin
     `cd flavor-bot`
 
 2. Create and activate a virtual environment: 
-     `python -m venv` 
-     `venv source venv/bin/activate` 
+     * `python -m venv` 
+     * `venv source venv/bin/activate` 
     >  On Windows, use `venv\Scripts\activate`
 
 
