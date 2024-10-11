@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Flavor Bot</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        #chat-container {
+            width: 90%;
+            max-width: 700px;
+            background-color: #fff;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        #chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 20px;
+            max-width: 80%;
+            animation: fadeIn 0.5s;
+        }
+        .bot-message {
+            background-color: #e7f3fe;
+            border-top-left-radius: 0;
+            align-self: flex-start;
+        }
+        .user-message {
+            background-color: #dcf8c6;
+            border-top-right-radius: 0;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        #input-area {
+            display: flex;
+            padding: 20px;
+            background-color: #fff;
+            border-top: 1px solid #eee;
+        }
+        #user-input {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 30px;
+            font-size: 16px;
+            outline: none;
+        }
+        #send-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            margin-left: 10px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #send-button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <header>Local Flavor Bot</header>
+        <div id="chat-messages"></div>
+        <div id="input-area">
+            <input type="text" id="user-input" placeholder="Ask for a recipe...">
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            function addMessage(sender, message) {
+                var messageClass = sender === 'Bot' ? 'bot-message' : 'user-message';
+                $('#chat-messages').append('<div class="message ' + messageClass + '"><strong>' + sender + ':</strong> ' + message + '</div>');
+                $('#chat-messages').scrollTop($('#chat-messages')[0].scrollHeight);
+            }
+                
+            var welcome_message = `Hello and welcome to the Local Flavor Bot! 🍳👨‍🍳👩‍🍳
+
+I'm here to help you discover delicious recipes based on the ingredients you have or the dishes you're craving.
+
+How can I assist you today?`;
+
+            addMessage('Bot', welcome_message);
+            function sendMessage() {
+                var userMessage = $('#user-input').val();
+                if (userMessage.trim() != '') {
+                    addMessage('You', userMessage);
+                    $('#user-input').val('');
+
+                    $.ajax({
+                        url: '/search',
+                        method: 'POST',
+                        data: {query: userMessage},
+                        success: function(response) {
+                            if (response.length > 0) {
+                                var botResponse = "Here are some recipes that might interest you with the ingredients you provided:<br><br>";
+                                response.forEach(function(recipe, index) {
+                                    botResponse += (index + 1) + ". <b>" + recipe.name + "</b><br>";
+                                    botResponse += "Ingredients: " + recipe.ingredients + "<br>";
+                                    botResponse += "Instructions: " + recipe.steps + "<br><br>";
+                                });
+                                addMessage('Bot', botResponse);
+                            } else {
+                                addMessage('Bot', "I'm sorry, I couldn't find any matching recipes. Can you try rephrasing your request?");
+                            }
+                        },
+                        error: function() {
+                            addMessage('Bot', "Sorry, there was an error processing your request.");
+                        }
+                    });
+                }
+            }
+
+            $('#send-button').click(sendMessage);
+            $('#user-input').keypress(function(e) {
+                if (e.which == 13) {  // Enter key
+                    sendMessage();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
