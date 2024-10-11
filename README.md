@@ -4,7 +4,7 @@ Flavor Bot is a recipe recommendation chatbot that suggests recipes based on ing
 
 ## Live Demo
 
-You can try out the live version of the Local Flavor Bot here: [https://flavorbot.akgns.com/]
+You can try out the live version of the Local Flavor Bot here: https://flavorbot.akgns.com/
 
 ## Getting Started
 
@@ -21,15 +21,18 @@ These instructions will help you set up and run the project on your local machin
 #### Using Virtual Environment
 
 1. Clone the repository: `git clone https://github.com/ckagun/flavor-bot.git`
- `cd flavor-bot`
+ 
+    `cd flavor-bot`
 
-2. Create and activate a virtual environment: `python -m venv venv`
-source venv/bin/activate # On Windows, use `venv\Scripts\activate`
+2. Create and activate a virtual environment: 
+     `python -m venv` 
+     `venv source venv/bin/activate` 
+    >  On Windows, use `venv\Scripts\activate`
 
 
 3. Install the required packages: `pip install -r requirements.txt`
 
-4. Run the application: python recipe_finder.py
+4. Run the application: `python recipe_finder.py`
 
 5. The application should now be running on `http://localhost:5000`.
 
@@ -45,4 +48,4 @@ Flask, NLTK and scikit-learn
 
 For a complete list of dependencies, please refer to the requirements.txt file.
 ### Contributing
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please feel free to submit a pull request.
