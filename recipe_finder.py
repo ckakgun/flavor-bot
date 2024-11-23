@@ -6,6 +6,8 @@ from flask import Flask, request, jsonify, render_template
 from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from collections import defaultdict
+import time
 
 app = Flask(__name__)
 
@@ -61,20 +63,42 @@ def search_recipes(query, vectorizer, X, recipes_data, top_n=3):
     top_indices = similarities.argsort()[-top_n:][::-1]
     return [recipes_data[i] for i in top_indices if similarities[i] > 0]
 
+# Add this after app initialization
+request_counts = defaultdict(list)
+
+def is_rate_limited(ip):
+    now = time.time()
+    # Remove requests older than 5 seconds
+    request_counts[ip] = [req_time for req_time in request_counts[ip] if now - req_time < 5]
+    # Add current request
+    request_counts[ip].append(now)
+    # Check if more than 5 requests in last 5 seconds
+    return len(request_counts[ip]) > 5
+
 @app.route('/')
 def home():
     return render_template('index.html')
 
 @app.route('/search', methods=['POST'])
 def search():
+    ip = request.remote_addr
+    if is_rate_limited(ip):
+        return jsonify({
+            'error': 'Rate limit exceeded. Please wait a few seconds before trying again.',
+            'rate_limited': True
+        }), 429
+
     query = request.form['query']
     results = search_recipes(query, vectorizer, X, recipes_data)
 
-    return jsonify([{
-        'name': recipe['name'],
-        'ingredients': ', '.join(recipe['ingredients']),
-        'steps': recipe['steps']
-    } for recipe in results])
+    return jsonify({
+        'rate_limited': False,
+        'results': [{
+            'name': recipe['name'],
+            'ingredients': ', '.join(recipe['ingredients']),
+            'steps': recipe['steps']
+        } for recipe in results]
+    })
 
 def chat():
 

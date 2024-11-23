@@ -120,15 +120,18 @@ How can I assist you today?`;
                 if (userMessage.trim() != '') {
                     addMessage('You', userMessage);
                     $('#user-input').val('');
+                    $('#send-button').prop('disabled', true);
 
                     $.ajax({
                         url: '/search',
                         method: 'POST',
                         data: {query: userMessage},
                         success: function(response) {
-                            if (response.length > 0) {
+                            if (response.rate_limited) {
+                                addMessage('Bot', response.error);
+                            } else if (response.results.length > 0) {
                                 var botResponse = "Here are some recipes that might interest you with the ingredients you provided:<br><br>";
-                                response.forEach(function(recipe, index) {
+                                response.results.forEach(function(recipe, index) {
                                     botResponse += (index + 1) + ". <b>" + recipe.name + "</b><br>";
                                     botResponse += "Ingredients: " + recipe.ingredients + "<br>";
                                     botResponse += "Instructions: " + recipe.steps + "<br><br>";
@@ -138,8 +141,15 @@ How can I assist you today?`;
                                 addMessage('Bot', "I'm sorry, I couldn't find any matching recipes. Can you try rephrasing your request?");
                             }
                         },
-                        error: function() {
-                            addMessage('Bot', "Sorry, there was an error processing your request.");
+                        error: function(xhr) {
+                            if (xhr.status === 429) {
+                                addMessage('Bot', "Rate limit exceeded. Please wait a few seconds before trying again.");
+                            } else {
+                                addMessage('Bot', "Sorry, there was an error processing your request.");
+                            }
+                        },
+                        complete: function() {
+                            $('#send-button').prop('disabled', false);
                         }
                     });
                 }
