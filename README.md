@@ -37,9 +37,8 @@ These instructions will help you set up and run the project on your local machin
 5. The application should now be running on `http://localhost:5000`.
 
 #### Using Docker
-1) Change directory to docker : ⁠ `cd docker` ⁠
-2) Build flavor-bot : ⁠ `docker build -t flavor-bot:latest` ⁠
-3) Run image : ⁠ `docker run -p 5000:5000 -it recipe-finder` ⁠
+1) Build flavor-bot : `docker build -t flavor-bot:latest -f docker/Dockerfile .`
+2) Run image : `docker run -p 5000:5000 -it flavor-bot`
    
 #### Requirements
 The main requirements for this project are:
