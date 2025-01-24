@@ -20,7 +20,7 @@ These instructions will help you set up and run the project on your local machin
 
 #### Using Virtual Environment
 
-1. Clone the repository: `git clone https://github.com/ckagun/flavor-bot.git`
+1. Clone the repository: `git clone https://github.com/ckakgun/flavor-bot.git`
  
     `cd flavor-bot`
 
@@ -43,8 +43,14 @@ These instructions will help you set up and run the project on your local machin
 #### Requirements
 The main requirements for this project are:
 
-Flask, NLTK and scikit-learn
+- Flask, NLTK and scikit-learn
 
-For a complete list of dependencies, please refer to the requirements.txt file.
+You can download NLTK stopwords by running if you don't have it already:
+
+`import nltk`
+`nltk.download('stopwords')`
+
+For a complete list of dependencies, please refer to the [requirements.txt](requirements.txt) file.
+
 ### Contributing
 Contributions are welcome! Please feel free to submit a pull request.
