@@ -6,6 +6,11 @@ Flavor Bot is a recipe recommendation chatbot that suggests recipes based on ing
 
 You can try out the live version of the Local Flavor Bot here: https://flavorbot.akgns.com/
 
+## User Interface
+
+![Flavor Bot Interface](assets/gui.png)
+
+
 ## Getting Started
 
 These instructions will help you set up and run the project on your local machine.
@@ -43,12 +48,16 @@ These instructions will help you set up and run the project on your local machin
 #### Requirements
 The main requirements for this project are:
 
-- Flask, NLTK and scikit-learn
+- Flask,
+- NLTK,
+- scikit-learn
 
 You can download NLTK stopwords by running if you don't have it already:
 
-`import nltk`
-`nltk.download('stopwords')`
+```python
+import nltk
+nltk.download('stopwords')
+```
 
 For a complete list of dependencies, please refer to the [requirements.txt](requirements.txt) file.
 
