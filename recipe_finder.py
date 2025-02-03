@@ -132,14 +132,12 @@ def chat():
             print() # Add a blank line for readibility
 
 def run_flask():
-    app.run(debug=False, use_reloader=False)
+    app.run(debug=False, use_reloader=False, host='0.0.0.0', port=5001)
     
 def run_cli():
     chat()
 
 if __name__ == '__main__':
-    app.run(debug=True)
-    # Run Flask app in diff thread
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.start()
 

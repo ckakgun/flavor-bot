@@ -11,7 +11,7 @@ COPY recipe_finder.py .
 COPY recipes.json .
 COPY templates/ templates/
 
-EXPOSE 5000
+EXPOSE 5001
 
 ENV FLASK_APP=recipe_finder.py
 ENV FLASK_RUN_HOST=0.0.0.0
