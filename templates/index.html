@@ -1,167 +1,255 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Local Flavor Bot</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #f0f4f8;
+            background-color: #f0f2f5;
+            height: 100vh;
             margin: 0;
             padding: 20px;
+        }
+        .chat-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            height: calc(100vh - 40px);
             display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+            flex-direction: column;
         }
-        #chat-container {
-            width: 90%;
-            max-width: 700px;
-            background-color: #fff;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        header {
-            background-color: #4CAF50;
-            color: white;
+        .chat-header {
             padding: 20px;
-            text-align: center;
-            font-size: 24px;
-            font-weight: 600;
+            border-bottom: 1px solid #e0e0e0;
+            background: #4CAF50;  
+            color: white;
+            border-radius: 15px 15px 0 0;
         }
-        #chat-messages {
-            height: 400px;
+        .chat-messages {
+            flex-grow: 1;
             overflow-y: auto;
             padding: 20px;
-            background-color: #f9f9f9;
         }
         .message {
-            margin-bottom: 15px;
-            padding: 10px 15px;
-            border-radius: 20px;
+            margin-bottom: 20px;
             max-width: 80%;
-            animation: fadeIn 0.5s;
         }
         .bot-message {
-            background-color: #e7f3fe;
-            border-top-left-radius: 0;
-            align-self: flex-start;
+            margin-right: auto;
         }
         .user-message {
-            background-color: #dcf8c6;
-            border-top-right-radius: 0;
-            align-self: flex-end;
             margin-left: auto;
+            text-align: right;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .message-content {
+            padding: 12px 16px;
+            border-radius: 15px;
+            display: inline-block;
         }
-        #input-area {
-            display: flex;
-            padding: 20px;
-            background-color: #fff;
-            border-top: 1px solid #eee;
+        .bot-message .message-content {
+            background: #f1f0f0;
+            color: black;
+            border-top-left-radius: 5px;
         }
-        #user-input {
-            flex-grow: 1;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 30px;
-            font-size: 16px;
-            outline: none;
-        }
-        #send-button {
-            background-color: #4CAF50;
+        .user-message .message-content {
+            background: #4CAF50;  
             color: white;
-            border: none;
-            padding: 12px 20px;
-            margin-left: 10px;
-            border-radius: 30px;
-            cursor: pointer;
-            transition: background-color 0.3s;
+            border-top-right-radius: 5px;
         }
-        #send-button:hover {
-            background-color: #45a049;
+        .chat-input {
+            padding: 20px;
+            border-top: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 0 0 15px 15px;
+        }
+        .recipe-card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 6px;  
+            margin: 4px 0; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left: 4px solid #4CAF50;
+        }
+        .recipe-title {
+            color: #2c3e50;
+            margin-bottom: 4px; 
+            font-size: 1.1em;  
+            font-weight: bold;
+        }
+        .recipe-section {
+            margin: 4px 0;  
+        }
+        .recipe-section-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 2px; 
+            font-size: 0.95em; 
+        }
+        .ingredient-list {
+            list-style-type: none;
+            padding-left: 0;
+            margin: 0;
+            line-height: 1.3;  
+        }
+        .ingredient-list li {
+            margin-bottom: 2px;  
+        }
+        .step-list {
+            padding-left: 20px;
+            margin: 0;
+            line-height: 1.3;  
+        }
+        .step-list li {
+            margin-bottom: 2px;  
+        }
+        p.mb-1 {
+            margin-bottom: 0.15rem !important; 
+        }
+        .source-link {
+            color: #4CAF50;  
+            text-decoration: none;
+        }
+        .source-link:hover {
+            text-decoration: underline;
+        }
+        .btn-primary {
+            background-color: #4CAF50; 
+            border-color: #4CAF50;  
+        }
+        .btn-primary:hover {
+            background-color: #45a049;  
+            border-color: #45a049;  
         }
     </style>
 </head>
 <body>
-    <div id="chat-container">
-        <header>Local Flavor Bot</header>
-        <div id="chat-messages"></div>
-        <div id="input-area">
-            <input type="text" id="user-input" placeholder="Ask for a recipe...">
-            <button id="send-button">Send</button>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1 class="h4 m-0">Local Flavor Bot 🍳</h1>
+        </div>
+        
+        <div class="chat-messages" id="chat-messages">
+        </div>
+
+        <div class="chat-input">
+            <form id="chatForm" class="d-flex gap-2">
+                <input type="text" id="userInput" class="form-control" placeholder="Ask me about recipes...">
+                <button type="submit" class="btn btn-primary">Send</button>
+            </form>
         </div>
     </div>
 
     <script>
-        $(document).ready(function() {
-            function addMessage(sender, message) {
-                var messageClass = sender === 'Bot' ? 'bot-message' : 'user-message';
-                $('#chat-messages').append('<div class="message ' + messageClass + '"><strong>' + sender + ':</strong> ' + message + '</div>');
-                $('#chat-messages').scrollTop($('#chat-messages')[0].scrollHeight);
-            }
-                
-            var welcome_message = `Hello and welcome to the Local Flavor Bot! 🍳👨‍🍳👩‍🍳
+        const chatMessages = document.getElementById('chat-messages');
+        const chatForm = document.getElementById('chatForm');
+        const userInput = document.getElementById('userInput');
 
-I'm here to help you discover delicious recipes based on the ingredients you have or the dishes you're craving.
+        // Add welcome message
+        function addWelcomeMessage() {
+            const welcomeMessage = `Hello! I'm Local Flavor Bot! 🍳👨‍🍳👩‍🍳
+
+I'm your personal culinary assistant, ready to help you discover delicious recipes based on your ingredients or cravings.
 
 How can I assist you today?`;
+            addMessage('bot', welcomeMessage);
+        }
 
-            addMessage('Bot', welcome_message);
-            function sendMessage() {
-                var userMessage = $('#user-input').val();
-                if (userMessage.trim() != '') {
-                    addMessage('You', userMessage);
-                    $('#user-input').val('');
-                    $('#send-button').prop('disabled', true);
+        // Add a message to the chat
+        function addMessage(sender, content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            messageContent.innerHTML = content.replace(/\n/g, '<br>');
+            
+            messageDiv.appendChild(messageContent);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
 
-                    $.ajax({
-                        url: '/search',
-                        method: 'POST',
-                        data: {query: userMessage},
-                        success: function(response) {
-                            if (response.rate_limited) {
-                                addMessage('Bot', response.error);
-                            } else if (response.results.length > 0) {
-                                var botResponse = "Here are some recipes that might interest you with the ingredients you provided:<br><br>";
-                                response.results.forEach(function(recipe, index) {
-                                    botResponse += (index + 1) + ". <b>" + recipe.name + "</b><br>";
-                                    botResponse += "Ingredients: " + recipe.ingredients + "<br>";
-                                    botResponse += "Instructions: " + recipe.steps + "<br><br>";
-                                });
-                                addMessage('Bot', botResponse);
-                            } else {
-                                addMessage('Bot', "I'm sorry, I couldn't find any matching recipes. Can you try rephrasing your request?");
+        // Format recipe as HTML
+        function formatRecipe(recipe) {
+            return `
+                <div class="recipe-card">
+                    <div class="recipe-title">📝 ${recipe.name}</div>
+                    <div class="recipe-section">
+                        <div class="recipe-section-title">⏲️ Preparation</div>
+                        <p class="mb-1">• Ready in: ${recipe.readyInMinutes} min • Servings: ${recipe.servings}</p>
+                    </div>
+                    <div class="recipe-section">
+                        <div class="recipe-section-title">🧂 Ingredients</div>
+                        <ul class="ingredient-list">
+                            ${recipe.ingredients.split(', ').map(ingredient => 
+                                `<li>${ingredient}</li>`
+                            ).join('')}
+                        </ul>
+                    </div>
+                    <div class="recipe-section">
+                        <div class="recipe-section-title">📋 Instructions</div>
+                        <ol class="step-list">
+                            ${Array.isArray(recipe.steps) 
+                                ? recipe.steps.map(step => `<li>${step}</li>`).join('')
+                                : `<li>${recipe.steps}</li>`
                             }
-                        },
-                        error: function(xhr) {
-                            if (xhr.status === 429) {
-                                addMessage('Bot', "Rate limit exceeded. Please wait a few seconds before trying again.");
-                            } else {
-                                addMessage('Bot', "Sorry, there was an error processing your request.");
-                            }
-                        },
-                        complete: function() {
-                            $('#send-button').prop('disabled', false);
-                        }
-                    });
+                        </ol>
+                    </div>
+                    <div class="recipe-section">
+                        <div class="recipe-section-title">🔗 Source</div>
+                        <a href="${recipe.sourceUrl}" target="_blank" class="source-link">View Original Recipe</a>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Handle form submission
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const query = userInput.value.trim();
+            
+            if (!query) return;
+            
+            // Add user message
+            addMessage('user', query);
+            userInput.value = '';
+            
+            try {
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `query=${encodeURIComponent(query)}`
+                });
+                
+                const data = await response.json();
+                
+                if (data.rate_limited) {
+                    addMessage('bot', 'Rate limit exceeded. Please wait a few seconds before trying again.');
+                    return;
                 }
+                
+                if (!data.results || data.results.length === 0) {
+                    addMessage('bot', "I'm sorry, I couldn't find any matching recipes. Can you try rephrasing your request?");
+                    return;
+                }
+                
+                let botResponse = "Here are some recipes that might interest you:";
+                data.results.forEach(recipe => {
+                    botResponse += formatRecipe(recipe);
+                });
+                
+                addMessage('bot', botResponse);
+                
+            } catch (error) {
+                addMessage('bot', 'An error occurred while fetching recipes. Please try again.');
             }
-
-            $('#send-button').click(sendMessage);
-            $('#user-input').keypress(function(e) {
-                if (e.which == 13) {  // Enter key
-                    sendMessage();
-                }
-            });
         });
+
+        // Initialize chat with welcome message
+        addWelcomeMessage();
     </script>
 </body>
 </html>
