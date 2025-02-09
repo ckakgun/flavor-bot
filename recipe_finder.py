@@ -1,15 +1,12 @@
 import os
-import string
 import threading
 import requests
-import numpy as np
 from flask import Flask, request, jsonify, render_template
 from collections import defaultdict
 import time
 from sentence_transformers import SentenceTransformer
 import torch
 from dotenv import load_dotenv
-import re
 
 # Load API-Key from .env file
 load_dotenv()
@@ -368,11 +365,11 @@ def chat():
         if recipes:
             print("\nBot: Here are some recipes that might interest you:")
             for i, recipe in enumerate(recipes, 1):
-                print("\n" + "=" * 80)
-                print(f"\n📝 Recipe #{i}: {recipe['name']}")
-                print("=" * 80)
-                
-                print(f"\n⏲️  Preparation Details:")
+                print("\n" + "=" * 20)
+                print(f"📝 Recipe #{i}: {recipe['name']}")
+                print("=" * 20)
+            
+                print(f"⏲️  Preparation Details:")
                 print(f"   • Ready in: {recipe['readyInMinutes']} minutes")
                 print(f"   • Servings: {recipe['servings']}")
                 
@@ -380,7 +377,7 @@ def chat():
                 for ingredient in recipe['ingredients']:
                     print(f"   • {ingredient}")
                 
-                print("\n📋 Instructions:")
+                print(f"\n📋 Instructions:")
                 if isinstance(recipe['steps'], list):
                     for step_num, step in enumerate(recipe['steps'], 1):
                         if isinstance(step, dict) and 'step' in step:
@@ -391,7 +388,7 @@ def chat():
                     print(f"   {recipe['steps']}")
                 
                 print(f"\n🔗 Source URL: {recipe['sourceUrl']}")
-                print("\n" + "=" * 80)
+                print("=" * 20)
         else:
             print("\nBot: I'm sorry, I couldn't find any matching recipes. Can you try rephrasing your request?")
 
@@ -404,13 +401,8 @@ def run_cli():
 if __name__ == '__main__':
     import sys
     
-    # Check if --web flag is provided
-    if len(sys.argv) > 1 and sys.argv[1] == '--web':
-        # Run both web and CLI
-        flask_thread = threading.Thread(target=run_flask)
-        flask_thread.start()
+    if len(sys.argv) > 1 and sys.argv[1] == '--cli':
         run_cli()
-        flask_thread.join()
     else:
-        # Run only CLI by default
-        run_cli()
+        print("Starting web interface on http://localhost:5001")
+        run_flask()
