@@ -76,11 +76,12 @@ Then open your browser to navigate to the web interface.
 
 4. Run the application: `python recipe_finder.py`
 
-5. The application should now be running on `http://localhost:5000`.
+5. The application should now be running on `http://localhost:5001`.
 
 #### Using Docker
 1) Build flavor-bot : `docker build -t flavor-bot:latest -f docker/Dockerfile .`
-2) Run image : `docker run -p 5000:5000 -it flavor-bot`
+2) Run image : `docker run -p 5000:5001 -e API_KEY=your_spoonacular_api_key_here -it flavor-bot`
+3) The application can be accessed on `http://localhost:5000` while docker container(flavor-bot) is running on 5001th port.
 
 
 ### Example Queries
