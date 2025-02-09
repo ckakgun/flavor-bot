@@ -7,20 +7,51 @@ import time
 from sentence_transformers import SentenceTransformer
 import torch
 from dotenv import load_dotenv
+from datetime import datetime
 
 # Load API-Key from .env file
 load_dotenv()
 
 app = Flask(__name__) 
 
-#  API Configuration
+# API Configuration
 API_KEY = os.getenv('API_KEY')
 BASE_URL = 'https://api.spoonacular.com/recipes'
+
+# API limit tracking
+DAILY_LIMIT = 150
+api_calls = {
+    'count': 0,
+    'reset_time': datetime.now()
+}
 
 if not API_KEY: 
     print("Error: API_KEY environment variable is not set")
     print("Please make sure you have created a .env file with your API key")
     raise ValueError("API key is required")
+
+def check_api_limit():
+    """Check if we've hit the daily API limit"""
+    global api_calls
+    
+    # Reset counter if it's a new day
+    now = datetime.now()
+    if now.date() > api_calls['reset_time'].date():
+        api_calls = {
+            'count': 0,
+            'reset_time': now
+        }
+    
+    # Check if we've hit the limit
+    if api_calls['count'] >= DAILY_LIMIT:
+        return False
+    
+    return True
+
+def increment_api_counter():
+    """Increment the API call counter"""
+    global api_calls
+    api_calls['count'] += 1
 
 # Initialize the transformer model 
 print("Loading Transformer model...") 
@@ -211,6 +242,11 @@ def search_recipes(query, number=3):
     Search recipes using Spoonacular API and enhance results with transformer-based search
     """
     try:
+        # Check API limit
+        if not check_api_limit():
+            print("Daily API limit reached. Please try again tomorrow.")
+            return {'error': 'API_LIMIT_REACHED'}
+            
         query = query.lower().strip()
         
         keywords = []
@@ -260,6 +296,7 @@ def search_recipes(query, number=3):
         
         response = requests.get(f'{BASE_URL}/complexSearch', params=params)
         response.raise_for_status()
+        increment_api_counter()  # Increment counter after successful API call
         results = response.json()['results']
         
         if not results and len(keywords) > 1:
@@ -327,6 +364,13 @@ def search():
     query = request.form['query']
     results = search_recipes(query)
 
+    # Check API limit
+    if isinstance(results, dict) and results.get('error') == 'API_LIMIT_REACHED':
+        return jsonify({
+            'error': 'Daily API limit reached. Please try again tomorrow.',
+            'api_limited': True
+        }), 429
+
     return jsonify({
         'rate_limited': False,
         'results': [{
@@ -361,6 +405,11 @@ def chat():
             break
         
         recipes = search_recipes(query)
+
+        # Check the API limit
+        if isinstance(recipes, dict) and recipes.get('error') == 'API_LIMIT_REACHED':
+            print("\nBot: I'm sorry, we've reached our daily API limit. Please try again tomorrow!")
+            continue
 
         if recipes:
             print("\nBot: Here are some recipes that might interest you:")
