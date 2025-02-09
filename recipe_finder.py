@@ -1,5 +1,4 @@
 import os
-import threading
 import requests
 from flask import Flask, request, jsonify, render_template
 from collections import defaultdict
@@ -58,60 +57,6 @@ print("Loading Transformer model...")
 model = SentenceTransformer('all-MiniLM-L6-v2') 
 cached_recipes = [] 
 recipe_embeddings = None 
-
-def preprocess_query(query):
-    """Extract relevant search terms from natural language query"""
-    # Common words to remove, organized by category
-    cooking_stopwords = {
-        # Cooking related
-        'recipe', 'cook', 'cooking', 'make', 'making', 'prepare', 'preparing',
-        'meal', 'food', 'eat', 'eating',
-        
-        # Action words
-        'want', 'need', 'show', 'tell', 'give', 'find', 'search', 'looking',
-        'using', 'have', 'has', 'had', 'help', 'recommend',
-        
-        # Common words
-        'something', 'anything', 'with', 'without', 'can', 'could', 'should',
-        'would', 'like', 'please', 'bit', 'lately', 'tbh',
-        
-        # Pronouns and articles
-        'i', 'me', 'my', 'am', 'im', 'a', 'an', 'the'
-    }
-    
-    # Important food and health related words to keep
-    important_words = {
-        # Meal types
-        'soup', 'stew', 'salad', 'breakfast', 'lunch', 'dinner', 'dessert',
-        
-        # Diet preferences
-        'healthy', 'vegetarian', 'vegan', 'gluten-free', 'dairy-free',
-        
-        # Health conditions
-        'sick', 'cold', 'flu', 'energy', 'power', 'boost', 'immune',
-        'healing', 'recovery', 'health', 'wellness'
-    }
-    
-    # Remove punctuation
-    query = query.lower()
-    query = re.sub(r'[^\w\s-]', ' ', query)  
-    
-    # Split into words
-    words = query.split()
-    
-    # Keep important words and words not in stopwords
-    filtered_words = [word for word in words if word in important_words or word not in cooking_stopwords]
-    
-    # If no important words found, return original query
-    if not filtered_words:
-        return query
-        
-    # Add 'healthy' if health-related words are present
-    health_indicators = {'sick', 'cold', 'flu', 'energy', 'power', 'immune', 'healing', 'recovery'}
-    if any(word in health_indicators for word in filtered_words):
-        filtered_words.append('healthy')
-    
-    return ' '.join(filtered_words)
 
 def cache_recipes(recipes):
     """Cache recipe embeddings for faster subsequent searches"""
