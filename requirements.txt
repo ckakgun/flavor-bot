@@ -6,4 +6,3 @@ huggingface-hub==0.17.3
 torch>=2.0.0
 numpy>=1.20.0
 python-dotenv==1.0.0
-logging==0.5.1
