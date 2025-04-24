@@ -1,62 +1,38 @@
-import os
-import requests
-from flask import Flask, request, jsonify, render_template
-from collections import defaultdict
+import sys
 import time
-from sentence_transformers import SentenceTransformer
+import os
+from collections import defaultdict
+from flask import Flask, request, jsonify, render_template
 import torch
-from dotenv import load_dotenv
-from datetime import datetime
+import torch.nn.functional as F
+from sentence_transformers import SentenceTransformer
+from src.components.api import search_recipes
+from src.logger import setup_logger
 
-# Load API-Key from .env file
-load_dotenv()
+# Setup logger
+logger = setup_logger()
 
-app = Flask(__name__) 
-
-# API Configuration
-API_KEY = os.getenv('API_KEY')
-BASE_URL = 'https://api.spoonacular.com/recipes'
-
-# API limit tracking
-DAILY_LIMIT = 150
-api_calls = {
-    'count': 0,
-    'reset_time': datetime.now()
-}
-
-if not API_KEY: 
-    print("Error: API_KEY environment variable is not set")
-    print("Please make sure you have created a .env file with your API key")
-    raise ValueError("API key is required")
-
-def check_api_limit():
-    """Check if we've hit the daily API limit"""
-    global api_calls
-    
-    # Reset counter if it's a new day
-    now = datetime.now()
-    if now.date() > api_calls['reset_time'].date():
-        api_calls = {
-            'count': 0,
-            'reset_time': now
-        }
-    
-    # Check if we've hit the limit
-    if api_calls['count'] >= DAILY_LIMIT:
-        return False
-    
-    return True
-
-def increment_api_counter():
-    """Increment the API call counter"""
-    global api_calls
-    api_calls['count'] += 1
+# Initialize Flask app
+app = Flask(__name__)
 
 # Initialize the transformer model 
-print("Loading Transformer model...") 
+logger.info("Loading Transformer model...") 
 model = SentenceTransformer('all-MiniLM-L6-v2') 
 cached_recipes = [] 
 recipe_embeddings = None 
+
+# Rate limiting
+request_counts = defaultdict(list)
+
+def is_rate_limited(ip):
+    """Check if the IP is rate limited"""
+    now = time.time()
+    # Remove requests older than 5 seconds
+    request_counts[ip] = [req_time for req_time in request_counts[ip] if now - req_time < 5]
+    # Add current request
+    request_counts[ip].append(now)
+    # Check if more than 5 requests in last 5 seconds
+    return len(request_counts[ip]) > 5
 
 def cache_recipes(recipes):
     """Cache recipe embeddings for faster subsequent searches"""
@@ -86,7 +62,12 @@ def semantic_search(query, recipes, top_k=4):
     query_embedding = model.encode(query, convert_to_tensor=True)
     
     # Calculate cosine similarities
-    cos_scores = torch.nn.functional.cosine_similarity(query_embedding.unsqueeze(0), recipe_embeddings)
+    # Normalize the embeddings
+    query_embedding = query_embedding / query_embedding.norm(dim=0, keepdim=True)
+    normalized_recipe_embeddings = recipe_embeddings / recipe_embeddings.norm(dim=1, keepdim=True)
+    
+    # Calculate dot product (cosine similarity with normalized vectors)
+    cos_scores = torch.matmul(query_embedding, normalized_recipe_embeddings.T)
     
     # Get top-k recipes
     top_results = torch.topk(cos_scores, k=min(top_k, len(recipes)))
@@ -105,10 +86,12 @@ def is_food_related(word, threshold=0.4):
     word_embedding = model.encode(word, convert_to_tensor=True)
     category_embeddings = model.encode(food_categories, convert_to_tensor=True)
     
-    # Calculate similarities
-    similarities = torch.nn.functional.cosine_similarity(
-        word_embedding.unsqueeze(0), category_embeddings
-    )
+    # Normalize embeddings
+    word_embedding = word_embedding / word_embedding.norm()
+    category_embeddings = category_embeddings / category_embeddings.norm(dim=1, keepdim=True)
+    
+    # Calculate similarities using dot product of normalized vectors (cosine similarity)
+    similarities = torch.matmul(word_embedding, category_embeddings.T)
     
     # Return True if the word is similar enough to any food category
     return torch.max(similarities).item() > threshold
@@ -179,119 +162,67 @@ def extract_excluded_ingredients(query):
         if item not in expanded_excluded:
             expanded_excluded.add(item)
     
-    print(f"Found excluded ingredients: {expanded_excluded}")  # Debug print
+    logger.debug(f"Found excluded ingredients: {expanded_excluded}")
     return list(expanded_excluded)
 
-def search_recipes(query, number=3):
+def process_query(query, number=3):
     """
-    Search recipes using Spoonacular API and enhance results with transformer-based search
+    Process user query and enhance with semantic search
     """
-    try:
-        # Check API limit
-        if not check_api_limit():
-            print("Daily API limit reached. Please try again tomorrow.")
-            return {'error': 'API_LIMIT_REACHED'}
-            
-        query = query.lower().strip()
+    query = query.lower().strip()
         
-        keywords = []
+    keywords = []
         
-        health_terms = {
-            'energy', 'healthy', 'nutritious', 'protein',
-            'vitamin', 'minerals', 'boost', 'power'
-        }
+    health_terms = {
+        'energy', 'healthy', 'nutritious', 'protein',
+        'vitamin', 'minerals', 'boost', 'power'
+    }
         
-        common_words = {
-            'i', 'me', 'my', 'can', 'you', 'please', 'want', 'would', 'like', 'need',
-            'help', 'looking', 'for', 'some', 'recipe', 'recipes', 'with', 'using',
-            'make', 'cook', 'cooking', 'recommend', 'show', 'tell', 'give', 'a', 'an',
-            'the', 'and', 'or', 'but', 'to', 'that', 'this', 'these', 'those', 'fill'
-        }
+    common_words = {
+        'i', 'me', 'my', 'can', 'you', 'please', 'want', 'would', 'like', 'need',
+        'help', 'looking', 'for', 'some', 'recipe', 'recipes', 'with', 'using',
+        'make', 'cook', 'cooking', 'recommend', 'show', 'tell', 'give', 'a', 'an',
+        'the', 'and', 'or', 'but', 'to', 'that', 'this', 'these', 'those', 'fill'
+    }
         
-        words = query.split()
+    words = query.split()
         
-        for word in words:
-            if len(word) > 2 and word not in common_words:
-                if is_food_related(word):
-                    keywords.append(word)
-                    print(f"Found food-related word: {word}")
+    for word in words:
+        if len(word) > 2 and word not in common_words:
+            if is_food_related(word):
+                keywords.append(word)
+                logger.debug(f"Found food-related word: {word}")
                 
-        has_health_terms = any(term in query for term in health_terms)
-        if has_health_terms:
-            keywords.append('healthy')
+    has_health_terms = any(term in query for term in health_terms)
+    if has_health_terms:
+        keywords.append('healthy')
             
-        if not keywords:
-            search_query = query
-        else:
-            search_query = ' '.join(keywords)
+    if not keywords:
+        search_query = query
+    else:
+        search_query = ' '.join(keywords)
             
-        print(f"Original query: {query}")
-        print(f"Keywords found: {keywords}")
-        print(f"Search query: {search_query}")
+    logger.info(f"Original query: {query}")
+    logger.debug(f"Keywords found: {keywords}")
+    logger.debug(f"Search query: {search_query}")
+    
+    # Call API to get recipes
+    recipes = search_recipes(query, search_query, number)
+    
+    if isinstance(recipes, dict) and recipes.get('error') == 'API_LIMIT_REACHED':
+        return recipes
         
-        
-        params = {
-            'apiKey': API_KEY,
-            'query': search_query,
-            'number': number * 2,
-            'addRecipeInformation': True,
-            'fillIngredients': True,
-            'instructionsRequired': True
-        }
-        
-        response = requests.get(f'{BASE_URL}/complexSearch', params=params)
-        response.raise_for_status()
-        increment_api_counter()  # Increment counter after successful API call
-        results = response.json()['results']
-        
-        if not results and len(keywords) > 1:
-            for keyword in keywords:
-                params['query'] = keyword
-                print(f"Trying with single keyword: {keyword}")
-                response = requests.get(f'{BASE_URL}/complexSearch', params=params)
-                response.raise_for_status()
-                results = response.json()['results']
-                if results:
-                    break
-        
-        if not results:
-            print("No results found")
-            return []
-            
-        print(f"Found {len(results)} recipes")
-        recipes = []
-        for recipe in results:
-            recipes.append({
-                'name': recipe['title'],
-                'ingredients': [ingredient['original'] for ingredient in recipe.get('extendedIngredients', [])],
-                'steps': [step['step'] for step in recipe.get('analyzedInstructions', [{}])[0].get('steps', [])]
-                        if recipe.get('analyzedInstructions') else recipe.get('instructions', '').split('\n'),
-                'readyInMinutes': recipe.get('readyInMinutes', 0),
-                'servings': recipe.get('servings', 0),
-                'sourceUrl': recipe.get('sourceUrl', '')
-            })
-        
+    # Cache recipes for semantic search
+    if recipes:
         cache_recipes(recipes)
-        
-        # most relevant results with semantic search
+        # Return most relevant results with semantic search
         return semantic_search(query, recipes, number)
+    
+    # Try with cached recipes if available
+    if cached_recipes:
+        return semantic_search(query, cached_recipes, number)
         
-    except requests.RequestException as e:
-        print(f"API Error: {str(e)}")
-        if cached_recipes:
-            return semantic_search(query, cached_recipes, number)
-        return []
-
-request_counts = defaultdict(list)
-
-def is_rate_limited(ip):
-    now = time.time()
-    # Remove requests older than 5 seconds
-    request_counts[ip] = [req_time for req_time in request_counts[ip] if now - req_time < 5]
-    # Add current request
-    request_counts[ip].append(now)
-    # Check if more than 5 requests in last 5 seconds
-    return len(request_counts[ip]) > 5
+    return []
 
 @app.route('/')
 def home():
@@ -307,7 +238,7 @@ def search():
         }), 429
 
     query = request.form['query']
-    results = search_recipes(query)
+    results = process_query(query)
 
     # Check API limit
     if isinstance(results, dict) and results.get('error') == 'API_LIMIT_REACHED':
@@ -336,6 +267,7 @@ def chat():
 
     How can I assist you today?
     """
+    logger.info("Starting chat session")
     print(welcome_message)
 
     exit_commands = [
@@ -346,19 +278,24 @@ def chat():
     while True:
         query = input("You: ")
         if query.lower() in exit_commands:
+            logger.info("Chat session ended by user")
             print("Bot: See you later!")
             break
         
-        recipes = search_recipes(query)
+        logger.info(f"User query: {query}")
+        # Process the query like we do in the web route
+        results = process_query(query)
 
         # Check the API limit
-        if isinstance(recipes, dict) and recipes.get('error') == 'API_LIMIT_REACHED':
+        if isinstance(results, dict) and results.get('error') == 'API_LIMIT_REACHED':
+            logger.warning("API limit reached during chat session")
             print("\nBot: I'm sorry, we've reached our daily API limit. Please try again tomorrow!")
             continue
 
-        if recipes:
+        if results:
+            logger.info(f"Found {len(results)} recipes for query: {query}")
             print("\nBot: Here are some recipes that might interest you:")
-            for i, recipe in enumerate(recipes, 1):
+            for i, recipe in enumerate(results, 1):
                 print("\n" + "=" * 20)
                 print(f"📝 Recipe #{i}: {recipe['name']}")
                 print("=" * 20)
@@ -384,19 +321,31 @@ def chat():
                 print(f"\n🔗 Source URL: {recipe['sourceUrl']}")
                 print("=" * 20)
         else:
+            logger.warning(f"No recipes found for query: {query}")
             print("\nBot: I'm sorry, I couldn't find any matching recipes. Can you try rephrasing your request?")
 
+
 def run_flask():
+    """
+    Run the Flask application
+    """
+    logger.info("Starting web interface on http://localhost:5001")
     app.run(debug=False, use_reloader=False, host='0.0.0.0', port=5001)
-    
+
 def run_cli():
+    """
+    Run the CLI interface
+    """
+    logger.info("Starting CLI interface")
     chat()
 
-if __name__ == '__main__':
-    import sys
-    
+def run_app():
+    """
+    Main entry point for the application
+    """
     if len(sys.argv) > 1 and sys.argv[1] == '--cli':
+        logger.info("Starting CLI interface")
         run_cli()
     else:
-        print("Starting web interface on http://localhost:5001")
+        logger.info("Starting web interface on http://localhost:5001")
         run_flask()
