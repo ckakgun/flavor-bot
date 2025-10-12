@@ -656,8 +656,18 @@
                 const data = await response.json();
                 removeLoadingMessage();
                 
+                if (data.guardrail_violation) {
+                    addMessage('bot', `⚠️ ${data.error || 'Your query contains invalid content. Please rephrase your request.'}`);
+                    return;
+                }
+                
                 if (data.rate_limited) {
                     addMessage('bot', 'Rate limit exceeded. Please wait a few seconds before trying again.');
+                    return;
+                }
+                
+                if (data.api_limited) {
+                    addMessage('bot', 'Daily API limit reached. Please try again tomorrow.');
                     return;
                 }
                 

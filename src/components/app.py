@@ -7,6 +7,7 @@ from sentence_transformers import SentenceTransformer
 from src.components.api import search_recipes
 from src.components.llm import understand_query as llm_understand_query
 from src.components.llm import extract_excluded_ingredients as llm_extract_excluded
+from src.components.llm import validate_input, GuardrailViolation
 from src.logger import setup_logger
 
 # Setup logger
@@ -264,6 +265,16 @@ def search():
         }), 429
 
     query = request.form['query']
+    
+    try:
+        validate_input(query, ip)
+    except GuardrailViolation as e:
+        logger.warning(f"Guardrail violation from {ip}: {str(e)}")
+        return jsonify({
+            'error': f'Invalid query: {str(e)}',
+            'guardrail_violation': True
+        }), 400
+    
     results = process_query(query)
 
     # Check API limit
@@ -309,7 +320,14 @@ def chat():
             break
         
         logger.info(f"User query: {query}")
-        # Process the query like we do in the web route
+        
+        try:
+            validate_input(query)
+        except GuardrailViolation as e:
+            logger.warning(f"Guardrail violation in CLI: {str(e)}")
+            print(f"\nBot: I'm sorry, but that query is not valid. {str(e)}")
+            continue
+        
         results = process_query(query)
 
         # Check the API limit

@@ -158,6 +158,10 @@ def validate_input(query: str, ip_address: str = None) -> None:
             logger.warning(f"Potential injection attempt detected: {pattern}")
             raise GuardrailViolation("Invalid user query pattern detected")
     
+    if not filter_content(query_stripped):
+        logger.warning(f"Off-topic query detected: {query_stripped}")
+        raise GuardrailViolation("Query must be food or recipe related")
+    
     if ip_address:
         _check_rate_limit(ip_address)
 
@@ -221,11 +225,30 @@ def filter_content(query: str) -> bool:
         'recipe', 'food', 'cook', 'ingredient', 'meal', 'dish', 'eat',
         'bake', 'cuisine', 'flavor', 'taste', 'spice', 'vegetable', 
         'fruit', 'meat', 'protein', 'grain', 'dairy', 'dessert',
-        'breakfast', 'lunch', 'dinner', 'snack', 'healthy', 'diet'
+        'breakfast', 'lunch', 'dinner', 'snack', 'healthy', 'diet',
+        'vegan', 'vegetarian', 'gluten', 'chicken', 'beef', 'pork',
+        'fish', 'seafood', 'pasta', 'rice', 'bread', 'cheese', 'egg',
+        'milk', 'butter', 'oil', 'sugar', 'salt', 'pepper', 'tomato',
+        'onion', 'garlic', 'potato', 'carrot', 'soup', 'salad', 'sauce',
+        'pizza', 'burger', 'sandwich', 'cake', 'cookie', 'pie'
     ]
     
     query_lower = query.lower()
     words = query_lower.split()
+    
+    off_topic_indicators = [
+        'weather', 'temperature', 'forecast', 'rain', 'sunny',
+        'math', 'calculate', 'solve', 'equation', 'problem',
+        'poem', 'story', 'write', 'essay', 'article',
+        'president', 'politics', 'government', 'election',
+        'stock', 'market', 'investment',
+        'movie', 'film', 'song', 'music', 'game',
+        'sports', 'football', 'basketball', 'soccer'
+    ]
+    
+    for indicator in off_topic_indicators:
+        if indicator in query_lower:
+            return False
     
     for word in words:
         if len(word) > 2 and word in food_domain_keywords:
@@ -233,6 +256,15 @@ def filter_content(query: str) -> bool:
     
     for keyword in food_domain_keywords:
         if keyword in query_lower:
+            return True
+    
+    common_food_phrases = [
+        'what can i', 'i have', 'i want', 'show me', 'find me',
+        'looking for', 'need a', 'make with', 'to cook'
+    ]
+    
+    for phrase in common_food_phrases:
+        if phrase in query_lower:
             return True
     
     return False
@@ -243,10 +275,6 @@ def understand_query(query: str, ip_address: str = None) -> Optional[Dict[str, A
     """
     try:
         validate_input(query, ip_address)
-        
-        if not filter_content(query):
-            logger.info(f"Query not food-related: {query}")
-            return None
         
         if not llm_client.is_available():
             logger.debug("LLM not available, skipping query understanding")
