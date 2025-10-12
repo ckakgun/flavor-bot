@@ -82,7 +82,7 @@
         .header-title {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 1px;
         }
 
         .header-title h1 {
@@ -93,8 +93,15 @@
         }
 
         .header-title .bot-icon {
-            font-size: 1.8rem;
-            animation: bounce 2s infinite;
+            font-size: 1.6rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            animation: none;
+        }
+
+        .header-title .bot-icon i {
+            color: white;
         }
 
         @keyframes bounce {
@@ -205,7 +212,7 @@
 
         .input-wrapper {
             display: flex;
-            gap: 12px;
+            gap: 1px;
             align-items: center;
         }
 
@@ -220,11 +227,32 @@
             transition: all 0.3s ease;
         }
 
+        .form-control::placeholder {
+            color: var(--text-tertiary);
+            opacity: 0.7;
+        }
+
         .form-control:focus {
             outline: none;
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
             background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .form-control:-webkit-autofill,
+        .form-control:-webkit-autofill:hover,
+        .form-control:-webkit-autofill:focus {
+            -webkit-text-fill-color: var(--text-primary);
+            -webkit-box-shadow: 0 0 0px 1000px var(--bg-secondary) inset;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+
+        [data-theme="dark"] .form-control:-webkit-autofill,
+        [data-theme="dark"] .form-control:-webkit-autofill:hover,
+        [data-theme="dark"] .form-control:-webkit-autofill:focus {
+            -webkit-text-fill-color: var(--text-primary);
+            -webkit-box-shadow: 0 0 0px 1000px var(--bg-secondary) inset;
         }
 
         .btn-send {
@@ -255,8 +283,9 @@
         .recipe-card {
             background: var(--bg-primary);
             border-radius: 16px;
-            padding: 20px;
-            margin: 12px 0;
+            padding: 14px;
+            margin: 4px 0;
+            margin-top: 24px;
             box-shadow: var(--shadow-md);
             border-left: 5px solid var(--primary-color);
             transition: all 0.3s ease;
@@ -269,37 +298,48 @@
 
         .recipe-title {
             color: var(--text-primary);
-            margin-bottom: 16px;
+            margin-bottom: 6px;
             font-size: 1.4em;
             font-weight: 700;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 6px;
+            line-height: 1.3;
         }
 
         .recipe-section {
-            margin: 16px 0;
+            margin: 4px 0;
         }
 
         .recipe-section-title {
             font-weight: 600;
             color: var(--primary-color);
-            margin-bottom: 10px;
+            margin-bottom: 4px;
             font-size: 1.05em;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
+            line-height: 1.3;
+        }
+
+        .recipe-title i,
+        .recipe-section-title i {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1em;
+            line-height: 1;
         }
 
         .ingredient-list {
             list-style-type: none;
             padding-left: 0;
             margin: 0;
-            line-height: 1.8;
+            line-height: 1.5;
         }
 
         .ingredient-list li {
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             color: var(--text-secondary);
             padding-left: 24px;
             position: relative;
@@ -316,11 +356,11 @@
         .step-list {
             padding-left: 24px;
             margin: 0;
-            line-height: 1.8;
+            line-height: 1.5;
         }
 
         .step-list li {
-            margin-bottom: 12px;
+            margin-bottom: 6px;
             color: var(--text-secondary);
         }
 
@@ -331,15 +371,15 @@
 
         .recipe-meta {
             display: flex;
-            gap: 20px;
-            margin-bottom: 16px;
+            gap: 12px;
+            margin-bottom: 4px;
             flex-wrap: wrap;
         }
 
         .meta-item {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             color: var(--text-secondary);
             font-size: 0.95em;
         }
@@ -353,20 +393,20 @@
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 1px;
             font-weight: 500;
             transition: all 0.3s ease;
         }
 
         .source-link:hover {
             color: var(--primary-dark);
-            gap: 10px;
+            gap: 1px;
         }
 
         .divider {
             height: 1px;
             background: var(--border-color);
-            margin: 16px 0;
+            margin: 6px 0;
         }
 
         .loading-dots {
@@ -438,8 +478,8 @@
     <div class="chat-container">
         <div class="chat-header">
             <div class="header-title">
-                <span class="bot-icon">🍳</span>
-                <h1>Flavor Bot</h1>
+                <span class="bot-icon"><i class="fas fa-robot"></i></span>
+                <h1> Flavor Bot</h1>
             </div>
             <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
                 <i class="fas fa-moon"></i>
@@ -489,11 +529,9 @@
         }
 
         function addWelcomeMessage() {
-            const welcomeMessage = `Hello! I'm Flavor Bot! 🍳
-
-I'm your personal culinary assistant, ready to help you discover delicious recipes based on your ingredients or cravings.
-
-How can I assist you today?`;
+            const welcomeMessage = `Hello! I'm Flavor Bot!
+            <br> I'm your personal culinary assistant, ready to help you discover delicious recipes based on your ingredients or cravings.
+            <br>How can I assist you today?`;
             addMessage('bot', welcomeMessage);
         }
 
@@ -503,7 +541,8 @@ How can I assist you today?`;
             
             const messageContent = document.createElement('div');
             messageContent.className = 'message-content';
-            messageContent.innerHTML = content.replace(/\n/g, '<br>');
+            
+            messageContent.innerHTML = content;
             
             messageDiv.appendChild(messageContent);
             chatMessages.appendChild(messageDiv);
@@ -540,9 +579,8 @@ How can I assist you today?`;
             return `
                 <div class="recipe-card">
                     <div class="recipe-title">
-                        <i class="fas fa-utensils"></i>
-                        ${recipe.name}
-                    </div>
+                        <i class="fas fa-utensils"></i> ${recipe.name}
+                    </div> <br>
                     
                     <div class="recipe-meta">
                         <div class="meta-item">
@@ -559,8 +597,7 @@ How can I assist you today?`;
                     
                     <div class="recipe-section">
                         <div class="recipe-section-title">
-                            <i class="fas fa-shopping-basket"></i>
-                            Ingredients
+                            <i class="fas fa-shopping-basket"></i> Ingredients
                         </div>
                         <ul class="ingredient-list">
                             ${recipe.ingredients.split(', ').map(ingredient => 
@@ -573,8 +610,7 @@ How can I assist you today?`;
                     
                     <div class="recipe-section">
                         <div class="recipe-section-title">
-                            <i class="fas fa-list-ol"></i>
-                            Instructions
+                            <i class="fas fa-list-ol"></i> Instructions
                         </div>
                         <ol class="step-list">
                             ${Array.isArray(recipe.steps) 
@@ -588,8 +624,7 @@ How can I assist you today?`;
                     
                     <div class="recipe-section">
                         <a href="${recipe.sourceUrl}" target="_blank" class="source-link">
-                            <i class="fas fa-external-link-alt"></i>
-                            View Original Recipe
+                            <i class="fas fa-external-link-alt"></i> View Original Recipe
                         </a>
                     </div>
                 </div>
@@ -621,25 +656,25 @@ How can I assist you today?`;
                 removeLoadingMessage();
                 
                 if (data.rate_limited) {
-                    addMessage('bot', '⏱️ Whoa there! Rate limit exceeded. Please wait a few seconds before trying again.');
+                    addMessage('bot', 'Rate limit exceeded. Please wait a few seconds before trying again.');
                     return;
                 }
                 
                 if (!data.results || data.results.length === 0) {
-                    addMessage('bot', "🤔 I couldn't find any matching recipes. Try rephrasing your request or asking for something else!");
+                    addMessage('bot', "I couldn't find any matching recipes. Try rephrasing your request or asking for something else!");
                     return;
                 }
                 
-                let botResponse = `✨ Great! I found ${data.results.length} delicious ${data.results.length === 1 ? 'recipe' : 'recipes'} for you:`;
+                let botResponse = `Great! I found ${data.results.length} delicious ${data.results.length === 1 ? 'recipe' : 'recipes'} for you:`;
                 data.results.forEach(recipe => {
                     botResponse += formatRecipe(recipe);
                 });
-                
+
                 addMessage('bot', botResponse);
                 
             } catch (error) {
                 removeLoadingMessage();
-                addMessage('bot', '❌ Oops! Something went wrong while fetching recipes. Please try again.');
+                addMessage('bot', 'Oops! Something went wrong while fetching recipes. Please try again.');
             }
         });
 
