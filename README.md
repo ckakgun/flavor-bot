@@ -1,9 +1,9 @@
-# Local Flavor Bot 🍳
+# Flavor Bot 🍳
 
-Local Flavor Bot is an intelligent recipe recommendation chatbot that suggests recipes based on ingredients or dish preferences. The bot uses the Spoonacular API for recipe data, implements semantic search for better results, and leverages LLM capabilities for advanced query understanding and dietary restriction detection.
+Flavor Bot is an intelligent recipe recommendation chatbot that suggests recipes based on ingredients or dish preferences. The bot uses the Spoonacular API for recipe data, implements semantic search for better results, and leverages LLM capabilities for advanced query understanding and dietary restriction detection.
 
 ## Features and Live Demo
-You can try out the live version of the Local Flavor Bot here: https://flavorbot.akgns.com/
+You can try out the live version of the Flavor Bot here: https://flavorbot.akgns.com/
 
 ## Screenshots
 ### Web Interface
