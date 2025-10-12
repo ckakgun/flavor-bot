@@ -1,12 +1,12 @@
 import sys
 import time
-import os
 from collections import defaultdict
 from flask import Flask, request, jsonify, render_template
 import torch
-import torch.nn.functional as F
 from sentence_transformers import SentenceTransformer
 from src.components.api import search_recipes
+from src.components.llm import understand_query as llm_understand_query
+from src.components.llm import extract_excluded_ingredients as llm_extract_excluded
 from src.logger import setup_logger
 
 # Setup logger
@@ -97,15 +97,21 @@ def is_food_related(word, threshold=0.4):
     return torch.max(similarities).item() > threshold
 
 def extract_excluded_ingredients(query):
-    """Extract ingredients that should be excluded from the recipe"""
-    # Negative patterns to check
+    """Extract ingredients that should be excluded from the recipe using Llama 3"""
+    llm_excluded = llm_extract_excluded(query)
+    
+    if llm_excluded:
+        logger.info(f"LLM extracted excluded ingredients: {llm_excluded}")
+        return llm_excluded
+    
+    logger.info("LLM unavailable, using fallback ingredient extraction")
+    
     negative_patterns = [
         'no', 'not', 'without', 'exclude', "don't", 'doesnt', 'doesn\'t',
         'except', 'excluding', 'free', '-free', 'none', 'cant', "can't",
         'cannot', 'avoid', 'allergic', 'allergy', 'intolerant', 'intolerance'
     ]
     
-    # Health condition patterns that indicate exclusion
     health_patterns = [
         "can't eat", "cannot eat", "cant eat",
         "can't have", "cannot have", "cant have",
@@ -117,32 +123,27 @@ def extract_excluded_ingredients(query):
     excluded = set()
     words = query.lower().split()
 
-    # Check for health condition patterns
     query_lower = query.lower()
     for pattern in health_patterns:
         if pattern in query_lower:
-            # Find the word after the pattern
             pattern_index = query_lower.find(pattern) + len(pattern)
             remaining_text = query_lower[pattern_index:].strip()
             next_word = remaining_text.split()[0] if remaining_text else ''
             if next_word and is_food_related(next_word):
                 excluded.add(next_word)
     
-    # Check for patterns like "dairy-free" or "gluten-free"
     for word in words:
         if word.endswith('-free'):
             base = word.replace('-free', '')
             if base in ['dairy', 'gluten', 'nut', 'egg', 'soy', 'lactose']:
                 excluded.add(base)
     
-    # Check for negative patterns
     for i, word in enumerate(words):
         if word in negative_patterns and i + 1 < len(words):
             next_word = words[i + 1]
             if is_food_related(next_word):
                 excluded.add(next_word)
 
-    # Common allergens and their variations
     allergen_mapping = {
         'milk': ['milk', 'dairy', 'lactose', 'cream', 'cheese', 'butter', 'yogurt', 'whey'],
         'egg': ['egg', 'eggs'],
@@ -151,7 +152,6 @@ def extract_excluded_ingredients(query):
         'gluten': ['gluten', 'wheat', 'rye', 'barley']
     }
     
-    # Expand excluded ingredients with their variations
     expanded_excluded = set()
     for item in excluded:
         for allergen, variations in allergen_mapping.items():
@@ -167,61 +167,87 @@ def extract_excluded_ingredients(query):
 
 def process_query(query, number=3):
     """
-    Process user query and enhance with semantic search
+    Process user query and enhance with semantic search using Llama 3
     """
+    query_original = query
     query = query.lower().strip()
-        
+    
     keywords = []
+    search_query = query
+    
+    llm_understanding = llm_understand_query(query)
+    
+    if llm_understanding:
+        logger.info("Using LLM-powered query understanding")
         
-    health_terms = {
-        'energy', 'healthy', 'nutritious', 'protein',
-        'vitamin', 'minerals', 'boost', 'power'
-    }
+        keywords = llm_understanding.get('keywords', [])
         
-    common_words = {
-        'i', 'me', 'my', 'can', 'you', 'please', 'want', 'would', 'like', 'need',
-        'help', 'looking', 'for', 'some', 'recipe', 'recipes', 'with', 'using',
-        'make', 'cook', 'cooking', 'recommend', 'show', 'tell', 'give', 'a', 'an',
-        'the', 'and', 'or', 'but', 'to', 'that', 'this', 'these', 'those', 'fill'
-    }
+        dietary_prefs = llm_understanding.get('dietary_preferences', [])
+        if dietary_prefs:
+            keywords.extend(dietary_prefs)
+            logger.debug(f"Dietary preferences: {dietary_prefs}")
         
-    words = query.split()
+        cuisine = llm_understanding.get('cuisine_type', '')
+        if cuisine:
+            keywords.append(cuisine)
+            logger.debug(f"Cuisine type: {cuisine}")
         
-    for word in words:
-        if len(word) > 2 and word not in common_words:
-            if is_food_related(word):
-                keywords.append(word)
-                logger.debug(f"Found food-related word: {word}")
-                
-    has_health_terms = any(term in query for term in health_terms)
-    if has_health_terms:
-        keywords.append('healthy')
-            
-    if not keywords:
-        search_query = query
+        meal_type = llm_understanding.get('meal_type', '')
+        if meal_type:
+            keywords.append(meal_type)
+            logger.debug(f"Meal type: {meal_type}")
+        
+        if keywords:
+            search_query = ' '.join(keywords)
+        
+        logger.info(f"LLM extracted keywords: {keywords}")
+    
     else:
-        search_query = ' '.join(keywords)
-            
-    logger.info(f"Original query: {query}")
+        logger.info("LLM unavailable, using fallback logic")
+        
+        health_terms = {
+            'energy', 'healthy', 'nutritious', 'protein',
+            'vitamin', 'minerals', 'boost', 'power'
+        }
+        
+        common_words = {
+            'i', 'me', 'my', 'can', 'you', 'please', 'want', 'would', 'like', 'need',
+            'help', 'looking', 'for', 'some', 'recipe', 'recipes', 'with', 'using',
+            'make', 'cook', 'cooking', 'recommend', 'show', 'tell', 'give', 'a', 'an',
+            'the', 'and', 'or', 'but', 'to', 'that', 'this', 'these', 'those', 'fill'
+        }
+        
+        words = query.split()
+        
+        for word in words:
+            if len(word) > 2 and word not in common_words:
+                if is_food_related(word):
+                    keywords.append(word)
+                    logger.debug(f"Found food-related word: {word}")
+        
+        has_health_terms = any(term in query for term in health_terms)
+        if has_health_terms:
+            keywords.append('healthy')
+        
+        if keywords:
+            search_query = ' '.join(keywords)
+    
+    logger.info(f"Original query: {query_original}")
     logger.debug(f"Keywords found: {keywords}")
     logger.debug(f"Search query: {search_query}")
     
-    # Call API to get recipes
-    recipes = search_recipes(query, search_query, number)
+    recipes = search_recipes(query_original, search_query, number)
     
     if isinstance(recipes, dict) and recipes.get('error') == 'API_LIMIT_REACHED':
         return recipes
-        
-    # Cache recipes for semantic search
+    
     if recipes:
         cache_recipes(recipes)
-        # Return most relevant results with semantic search
         return semantic_search(query, recipes, number)
     
-    # Try with cached recipes if available
     if cached_recipes:
         return semantic_search(query, cached_recipes, number)
-        
+    
     return []
 
 @app.route('/')
