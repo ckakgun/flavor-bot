@@ -7,7 +7,7 @@ You can try out the live version of the Flavor Bot here: https://flavorbot.akgns
 
 ## Screenshots
 ### Web Interface
-![Web Interface](assets/web_interface.png)
+![Web Interface](assets/web_interface1.png)
 
 ### Recipe Search Results
 ![Recipe Results](assets/recipe_results.png)
